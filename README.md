@@ -2,13 +2,19 @@
 
 Forwards messages from your **live-alerts** channel to **himothy-alerts** and **himothy-trades** channels in other servers.
 
-## Setup on Replit
+## Deploy on Railway
 
-1. Create a new Replit project (Node.js template)
-2. Import this repo (or paste index.js)
-3. Run `npm install` in the Shell
-4. Add your bot token as a Secret: `DISCORD_TOKEN`
-5. Click Run
+1. Connect this GitHub repo to Railway
+2. Go to **Settings > Variables**
+3. Add: `DISCORD_TOKEN` = your bot token
+4. Railway will auto-deploy
+
+## Deploy on Replit
+
+1. Create a new Node.js Replit
+2. Import this repo
+3. Add `DISCORD_TOKEN` in the Secrets tab
+4. Click Run
 
 ## Getting Your Bot Token
 
@@ -17,7 +23,7 @@ Forwards messages from your **live-alerts** channel to **himothy-alerts** and **
 3. Go to the **Bot** tab
 4. Click **Reset Token** and copy it
 5. Turn ON **Message Content Intent**
-6. Paste the token as `DISCORD_TOKEN` in Replit Secrets
+6. Use the token as `DISCORD_TOKEN`
 
 ## Inviting the Bot
 
@@ -25,7 +31,7 @@ Forwards messages from your **live-alerts** channel to **himothy-alerts** and **
 2. Go to **OAuth2** > **URL Generator**
 3. Select scopes: `bot`
 4. Select permissions: `Send Messages`, `Read Message History`, `View Channels`
-5. Copy the URL and open it to invite the bot to your servers
+5. Copy the URL and open it to invite the bot
 
 ## Customization
 
