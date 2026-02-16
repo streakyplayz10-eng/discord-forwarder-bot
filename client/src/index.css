@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Discord-inspired palette */
+  --background: 223 7% 20%;      /* #2f3136 */
+  --foreground: 0 0% 100%;       /* #ffffff */
+  
+  --card: 220 7% 18%;            /* #292b2f */
+  --card-foreground: 0 0% 100%;
+  
+  --popover: 220 7% 18%;
+  --popover-foreground: 0 0% 100%;
+  
+  --primary: 235 86% 65%;        /* #5865F2 (Blurple) */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 223 7% 20%;       /* #2f3136 */
+  --secondary-foreground: 210 10% 80%;
+  
+  --muted: 223 7% 20%;
+  --muted-foreground: 215 8% 65%;
+  
+  --accent: 145 65% 39%;         /* Green for success/active */
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 359 85% 65%;    /* Red for errors/danger */
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 216 7% 14%;          /* #202225 */
+  --input: 216 7% 14%;
+  --ring: 235 86% 65%;
+  
+  --radius: 0.75rem;
+  
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans selection:bg-primary/30;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(88, 101, 242, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(88, 101, 242, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Scrollbar for that Discord feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(223 7% 15%); 
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(216 7% 10%); 
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(216 7% 5%); 
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
