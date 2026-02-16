@@ -5,58 +5,44 @@
 // 2. Set the DISCORD_TOKEN environment variable to your bot token
 // 3. Start the bot with: node index.js
 //
-// SETUP YOUR BOT TOKEN:
-// 1. Go to https://discord.com/developers/applications
-// 2. Click your bot (or create one)
-// 3. Go to "Bot" tab
-// 4. Click "Reset Token" and copy it
-// 5. Make sure "MESSAGE CONTENT INTENT" is turned ON
-// 6. Set DISCORD_TOKEN in your host's environment variables
+// OPTIONAL ENVIRONMENT VARIABLES:
+//   SOURCE_CHANNEL - channel name keyword to watch (default: "external-feed")
+//   SOURCE_CHANNEL_ID - exact channel ID to watch (overrides name matching if set)
 //
 // ==========================================
 
 const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+const http = require('http');
 
-// ---- SETTINGS (change these to match your channels) ----
-const SOURCE_CHANNEL = 'live-alerts';        // channel name to watch (without emojis)
+const SOURCE_SERVER = 'Liquidity Lab';
+const SOURCE_CHANNEL_KEYWORD = process.env.SOURCE_CHANNEL || 'external-feed';
+const SOURCE_CHANNEL_ID = process.env.SOURCE_CHANNEL_ID || '';
 const TARGET_CHANNELS = [
-  'himothy-alerts',                           // first channel to forward to
-  'himothy-trades'                            // second channel to forward to
+  'himothy-alerts',
+  'himothy-trades'
 ];
-// ---------------------------------------------------------
 
 function channelMatches(channelName, target) {
   if (channelName === target) return true;
   const clean = channelName.replace(/[^\w-]/g, '').replace(/^-+/, '');
   if (clean === target) return true;
   if (channelName.includes(target)) return true;
+  const cleanTarget = target.replace(/[^\w-]/g, '').replace(/^-+/, '');
+  if (clean === cleanTarget) return true;
+  if (clean.includes(cleanTarget)) return true;
   return false;
+}
+
+function isSourceChannel(channel) {
+  if (SOURCE_CHANNEL_ID && channel.id === SOURCE_CHANNEL_ID) return true;
+  return channelMatches(channel.name, SOURCE_CHANNEL_KEYWORD);
 }
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
-  console.error('==============================================');
   console.error('ERROR: DISCORD_TOKEN environment variable is not set!');
-  console.error('');
-  console.error('Please set it in your hosting platform:');
-  console.error('  Railway: Settings > Variables > Add DISCORD_TOKEN');
-  console.error('  Replit:  Secrets tab > Add DISCORD_TOKEN');
-  console.error('');
-  console.error('To get your token:');
-  console.error('  1. Go to https://discord.com/developers/applications');
-  console.error('  2. Select your bot > Bot tab > Reset Token');
-  console.error('  3. Copy the token and paste it as DISCORD_TOKEN');
-  console.error('==============================================');
-  console.error('');
-  console.error('Waiting for DISCORD_TOKEN to be set... (will retry every 30s)');
-
-  setInterval(() => {
-    if (process.env.DISCORD_TOKEN) {
-      console.log('DISCORD_TOKEN detected! Restarting...');
-      process.exit(0);
-    }
-    console.log('Still waiting for DISCORD_TOKEN...');
-  }, 30000);
+  console.error('Set it in Railway: Variables tab > Add DISCORD_TOKEN');
+  process.exit(1);
 } else {
   startBot(token);
 }
@@ -70,9 +56,13 @@ function startBot(botToken) {
     ]
   });
 
+  let sourceChannelId = SOURCE_CHANNEL_ID;
+
   client.on('ready', async () => {
     console.log(`Bot is online as ${client.user.tag}`);
-    console.log(`Watching for messages in channels matching: "${SOURCE_CHANNEL}"`);
+    console.log(`Source server: "${SOURCE_SERVER}"`);
+    console.log(`Source channel keyword: "${SOURCE_CHANNEL_KEYWORD}"`);
+    if (SOURCE_CHANNEL_ID) console.log(`Source channel ID (override): ${SOURCE_CHANNEL_ID}`);
     console.log(`Forwarding to channels matching: ${TARGET_CHANNELS.join(', ')}`);
     console.log(`Connected to ${client.guilds.cache.size} servers:`);
 
@@ -81,20 +71,41 @@ function startBot(botToken) {
         const channels = await guild.channels.fetch();
         const textChannels = channels.filter(c => c && c.type === ChannelType.GuildText);
         console.log(`  ${guild.name}:`);
-        textChannels.forEach(c => { if (c) console.log(`    #${c.name}`); });
+        textChannels.forEach(c => {
+          if (c) {
+            const marker = isSourceChannel(c) ? ' <-- SOURCE' : '';
+            console.log(`    #${c.name} (ID: ${c.id})${marker}`);
+            if (marker && !sourceChannelId) {
+              sourceChannelId = c.id;
+              console.log(`    ^ Locked to this channel ID: ${c.id} (rename-proof)`);
+            }
+          }
+        });
       } catch (e) {
         console.log(`  ${guild.name}: (could not list channels)`);
       }
     }
     console.log('---');
     console.log('Bot is ready and listening!');
+    if (sourceChannelId) {
+      console.log(`Tracking source channel by ID: ${sourceChannelId} (renaming won't break forwarding)`);
+    }
   });
 
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    if (!channelMatches(message.channel.name, SOURCE_CHANNEL)) return;
 
-    console.log(`[NEW] Message from ${message.author.tag} in ${message.guild.name}#${message.channel.name}`);
+    const matchById = sourceChannelId && message.channel.id === sourceChannelId;
+    const matchByName = isSourceChannel(message.channel);
+
+    if (!matchById && !matchByName) return;
+
+    if (!sourceChannelId && matchByName) {
+      sourceChannelId = message.channel.id;
+      console.log(`Locked source channel ID: ${message.channel.id} (${message.channel.name})`);
+    }
+
+    console.log(`[NEW] Message from ${message.author.tag} in ${message.guild?.name}#${message.channel.name}`);
     console.log(`  Content: ${message.content.substring(0, 100)}`);
 
     let sent = 0;
@@ -140,8 +151,15 @@ function startBot(botToken) {
 
   client.login(botToken).catch(err => {
     console.error('Failed to login:', err.message);
-    console.error('Make sure your DISCORD_TOKEN is valid.');
-    console.error('Go to https://discord.com/developers/applications > your bot > Bot tab > Reset Token');
     process.exit(1);
+  });
+
+  const port = process.env.PORT || 3000;
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end(`Bot is running. Status: ${client.isReady() ? 'Online' : 'Connecting...'}\nSource channel ID: ${sourceChannelId || 'detecting...'}`);
+  });
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`Health check server running on port ${port}`);
   });
 }
